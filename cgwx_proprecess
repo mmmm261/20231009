@@ -1,0 +1,99 @@
+#Usage
+#遥感数据预处理：将rgba通道的tif数据，预处理并保存为npy格式。
+
+import numpy as np
+import cv2
+import glob
+import os
+from get_metrics import get_coco128box
+import numpy.ma as ma
+def tif2tif(img_path,save_path):
+    img_list = glob.glob(os.path.join(img_path + '\\*.tif'))
+    for img_file in img_list:
+        imga = cv2.imread(img_file, -1)  # b, g, r, a
+        img = imga[:,:,:3]
+        mask = imga[:,:,-1]
+        mask[mask > 0] = -1
+        mask[mask == 0] = 1
+        mask[mask < 0] = 0
+        #print(mask)
+
+        img_r = img[:, :, 0]
+        #img_r_mask = ma.masked_array(img_r, mask)
+        r_max = np.max(img_r)
+        r_min = np.min(img_r)
+        img_r = (img_r - r_min) * 255 / (r_max - r_min)
+        #img_r[img_r < 0] = 0
+
+
+        img_g = img[:, :, 1]
+        #img_g_mask = ma.masked_array(img_g, mask)
+        g_max = np.max(img_g)
+        g_min = np.min(img_g)
+        img_g = (img_g - g_min) * 255 / (g_max - g_min)
+        #img_g[img_g < 0] = 0
+        #print(g_max, g_min)
+
+        img_b = img[:, :, 2]
+        #img_b_mask = ma.masked_array(img_b, mask)
+        b_max = np.max(img_b)
+        b_min = np.min(img_b)
+        img_b = (img_b - b_min) * 255 / (b_max - b_min)
+        #img_b[img_b < 0] = 0
+
+        img[:, :, 0] = img_b
+        img[:, :, 1] = img_g
+        img[:, :, 2] = img_r
+
+        img_rgb = img.astype(np.uint8)
+        #
+        # b, g, r = cv2.split(img_rgb)
+        # r_avg = cv2.mean(r)[0]
+        # g_avg = cv2.mean(g)[0]
+        # b_avg = cv2.mean(b)[0]
+        #
+        # # 求各个通道所占增益
+        # k = (r_avg + g_avg + b_avg) / 3
+        # kr = k / r_avg
+        # kg = k / g_avg
+        # kb = k / b_avg
+        #
+        # r = cv2.addWeighted(src1=r, alpha=kr, src2=0, beta=0, gamma=0)
+        # g = cv2.addWeighted(src1=g, alpha=kg, src2=0, beta=0, gamma=0)
+        # b = cv2.addWeighted(src1=b, alpha=kb, src2=0, beta=0, gamma=0)
+        #
+        # balance_img = cv2.merge([b, g, r])
+        png_path = os.path.join(save_path + '\\' + "{}.png".format(img_file.split('\\')[-1].split('.')[0]))
+        #print(img_rgb)
+        cv2.imwrite(png_path, img_rgb)
+
+def c_label(img_path, label_path, save_path):
+    test_list = glob.glob(os.path.join(img_path + '\\*.png'))
+    label_list = glob.glob(os.path.join(label_path + '\\*.txt'))
+    for i, test_file in enumerate(test_list):
+        pred_file = label_list[i]
+        print(pred_file)
+        print(test_file)
+        img = cv2.imread(test_file)
+
+        H, W, _ = img.shape
+
+        if os.path.exists(pred_file):
+            pred_boxs = get_coco128box(pred_file, H, W)
+            for pred_point in pred_boxs:
+                cv2.rectangle(img, (pred_point[0], pred_point[1]), (pred_point[2], pred_point[3]), color = (0,0,255), thickness = 2)
+                #cv2.putText(img, 'pred_smoke', (pred_point[0], pred_point[1]), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (255, 255, 255), 1)
+                #cv2.putText(img, 'smoke' , (pred_point[0], pred_point[1]), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (255, 255, 255), 1)
+        new_path = os.path.join(save_path + '\\' + test_file.split('\\')[-1])
+        cv2.imwrite(new_path, img)
+def bgr_rgb(img_path, save_path):
+    img_list = glob.glob(os.path.join(img_path + '\\*.png'))
+    for file in img_list:
+        array = cv2.imread(file)
+        bgr_array = array[:,:,::-1]
+        cv2.imwrite(os.path.join(save_path, file.split('\\')[-1]), bgr_array)
+
+if __name__ == '__main__':
+    img_path = r'E:\pycode\datasets\cgwx_rematch\test_dataset\origal_image'
+    save_path = r'E:\pycode\datasets\cgwx_rematch\test_dataset\bgr_max'
+    tif2tif(img_path,save_path)
