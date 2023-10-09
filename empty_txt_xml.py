@@ -15,6 +15,14 @@ def empty_tonghua_result(img_path,save_path):
         with open(txt_path, 'a') as f:
             f.close()
 
+def supply_empty_folder(img_file_path, result_xml_path):
+    file_list = os.listdir(img_file_path)
+    for file in file_list:
+        if not os.path.exists(os.path.join(result_xml_path, file.replace('jpg', 'xml'))):
+            txt_path = os.path.join(result_xml_path, file.replace('jpg', 'xml'))
+            with open(txt_path, 'a') as f:
+                f.close()
+
 def get_away_repeat(img_path,xml_path):
     img_file_list = [i.split('.')[0] for i in os.listdir(img_path)]
     xml_file_list = [i.split('.')[0] for i in os.listdir(xml_path)]
@@ -46,9 +54,7 @@ def get_away_empty(img_path,xml_path):
                 os.remove(xml_file)
                 os.remove(img_file)
 
-
 if __name__ == '__main__':
-    detect_result_path = r'C:\Users\1\Desktop\detection-results'
-    img_path = r'E:\pycode\datasets\DZYH_test_dataset\yan_cut20220802_test_smoke\images'
-    xml_path = r'E:\pycode\datasets\DZYH_test_dataset\yan_cut20220802_test_smoke\xml'
-    empty_cgwx_result(detect_result_path)
+    img_path = r'F:\tmp_single_frame_data\cc20221018\images'
+    xml_path = r'F:\tmp_single_frame_data\cc20221018\20220811_best_pretrained_20220830_best_result_xml'
+    supply_empty_folder(img_path, xml_path)

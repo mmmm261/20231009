@@ -30,6 +30,9 @@ def readTif(fileName, file_type = np.uint8):
         if file_type == np.uint16:
             img[:, :, i] = cv2.convertScaleAbs(band_data, alpha=(255.0 / 65535.0))
     img = img[:,:,::-1]
+    print(img.shape)
+    print(np.max(img))
+    print(np.min(img))
     return img
 
 def RGB_to_labe15l(img):
@@ -75,15 +78,15 @@ def RGB_to_label5(img):
     label = np.zeros(shape=[img.shape[0], img.shape[1]], dtype=np.uint8)
     for i in range(0, img.shape[0]):
         for j in range(0, img.shape[1]):
-            if all(np.array(img[i][j]) == np.array([255, 0, 0])):  # 绾⑩緤锛屽缓鎴愬尯
+            if all(np.array(img[i][j]) == np.array([255, 0, 0])):  # red, build_up
                 label[i][j] = 1
-            elif all(np.array(img[i][j]) == np.array([0, 255, 0])):  # 缁库緤锛屽啘饨ゅ湴
+            elif all(np.array(img[i][j]) == np.array([0, 255, 0])):  # green, farmland
                 label[i][j] = 2
-            elif all(np.array(img[i][j]) == np.array([0, 255, 255])):  # 澶╄摑饩婏紝鏋楀湴
+            elif all(np.array(img[i][j]) == np.array([0, 255, 255])):  # sky_blue, forest
                 label[i][j] = 3
-            elif all(np.array(img[i][j]) == np.array([255, 255, 0])):  # 榛勨緤锛岃崏鍦?
+            elif all(np.array(img[i][j]) == np.array([255, 255, 0])): # yellow, meadow
                 label[i][j] = 4
-            elif all(np.array(img[i][j]) == np.array([0, 0, 255])):  # 钃濃緤锛屸綌绯?
+            elif all(np.array(img[i][j]) == np.array([0, 0, 255])):  # blue, water
                 label[i][j] = 5
             else:
                 label[i][j] = 0
@@ -154,6 +157,7 @@ class GID_process():
         self.padding_size = int(0.5 * infer_size)
         self.block_save_path = os.path.join(self.tif_path.split('.')[0] + '_block')
         #self.block_save_path = os.path.join(os.path.dirname(os.path.dirname(tif_path)), 'label_5classes_png_block')
+        self.block_save_path = r'E:\pycode\datasets\GID_dataset\Large-scale Classification_5classes\image_RGB\tmp'
 
         self.padding_block_save_path = os.path.join(self.tif_path.split('.')[0] + '_padding_block')
         #self.merge_save_path = os.path.join(self.tif_path.split('.')[0] + '_result')
@@ -172,8 +176,9 @@ class GID_process():
         if not os.path.exists(self.block_save_path):
             os.mkdir(self.block_save_path)
 
-        self.tif_img = readTif(self.tif_path) if self.tif_path.endswith('tif') else cv2.imread(self.tif_path, 0)
+        self.tif_img = readTif(self.tif_path) if self.tif_path.endswith('tif') else cv2.imread(self.tif_path)
         mask_tif = np.zeros((self.new_h, self.new_w, self.origal_c)) if self.origal_c > 1 else np.zeros((self.new_h, self.new_w))
+
         try:
             mask_tif[:self.origal_h, :self.origal_w, :] = self.tif_img
         except:
@@ -270,9 +275,156 @@ def test_merge():
         gid.merge_save_path = r'E:\pycode\Remote_sensing_segmentation\run\resnet101_pretrained_DANet_20220924_epoch15'
         gid.merge_tif(pred_path_)
 
-if __name__ == '__main__':
-    test_merge()
+def dd_1():
+    label = np.array([[0,1]
+                     ,[2,3]])
+    print(label.shape)
+    #label = label / 51.0
+    print(np.unique(label))
+    lab = np.ones([1,4,2,2])
+    for i in range(4):
+        mask = np.zeros_like(label)
+        mask[label == i] = 1
+        lab[0,i,:,:] = mask
+    print(lab.shape)
+    print(lab)
 
+def dd_2():
+    NRGB_file = r'E:\pycode\datasets\GID_dataset\Large-scale Classification_5classes\tmp_ori_rgb\GF2_PMS2__L1A0000607681-MSS2.tif'
+    # driver = gdal.GetDriverByName('GTiff')
+    # driver.Register()
+    NRGB_img = gdal.Open(NRGB_file)
+
+    im_width = NRGB_img.RasterXSize
+    im_height = NRGB_img.RasterYSize
+
+    N_band = NRGB_img.GetRasterBand(1)
+    N_band_data = N_band.ReadAsArray(0, 0, im_width, im_height).astype(np.uint8)
+    print(N_band_data.shape)
+    print(im_width)
+    R_band = NRGB_img.GetRasterBand(2)
+    R_band_data = R_band.ReadAsArray(0, 0, im_width, im_height).astype(np.uint8)
+    G_band = NRGB_img.GetRasterBand(3)
+    G_band_data = G_band.ReadAsArray(0, 0, im_width, im_height).astype(np.uint8)
+    B_band = NRGB_img.GetRasterBand(4)
+    B_band_data = B_band.ReadAsArray(0, 0, im_width, im_height).astype(np.uint8)
+    # img = np.concatenate([R_band_data[None], G_band_data[None], B_band_data[None]], axis = 0)
+    # img = img.transpose((1, 2, 0))[:,:,::-1] #CHW->HWC; RGB->BGR
+    print("N_band_data:", N_band_data[:10,:10])
+    print("R_band_data:", R_band_data[:10,:10])
+    print("G_band_data:", G_band_data[:10,:10])
+    print("B_band_data:", B_band_data[:10,:10])
+    print("===================")
+    img2 = cv2.imread(NRGB_file, -1)#NIRRGB
+    print(img2.shape)
+    rgb_img = img2[:,:,1:]#RGB
+    print(rgb_img.shape)
+    bgr_img = rgb_img[:,:,::-1]#BGR
+
+
+    # ndvi = ((N_band_data - R_band_data + 0.0001) / (N_band_data + R_band_data + 0.0001)).astype(np.float32)
+    # ndvi = (ndvi + 1)/2 * 255.0
+    # ndvi.astype(np.uint8)
+    # print(np.max(ndvi), np.min(ndvi))
+
+    # print(np.sum(ndvi > 0))
+    # print(np.sum(ndvi < 0))
+    # print(band_data.max())
+    # img = cv2.imread(NRGB_file, -1)
+    # for i in range(4):
+    #     print(np.max(img[:,:,i]))
+    # print(img.shape)
+    cv2.imwrite(r'E:\pycode\datasets\GID_dataset\Large-scale Classification_5classes\1.png', bgr_img)
+
+
+def dd_3():
+    RGB_file = r'E:\pycode\datasets\GID_dataset\Large-scale Classification_5classes\tmp_ori_rgb\GF2_PMS2__L1A0000607681-MSS2.tif'
+    NRGB_file = r'E:\pycode\datasets\GID_dataset\Large-scale Classification_5classes\tmp_ori_nrgb\GF2_PMS2__L1A0000607681-MSS2.tif'
+    # driver = gdal.GetDriverByName('GTiff')
+    # driver.Register()
+    NRGB_img = gdal.Open(NRGB_file)
+    im_width = NRGB_img.RasterXSize
+    im_height = NRGB_img.RasterYSize
+    print(im_height, im_width)
+    N_band = NRGB_img.GetRasterBand(1)
+    N_band_data = N_band.ReadAsArray(0, 0, im_width, im_height).astype(np.uint8)
+    R_band = NRGB_img.GetRasterBand(2)
+    R_band_data = R_band.ReadAsArray(0, 0, im_width, im_height).astype(np.uint8)
+    G_band = NRGB_img.GetRasterBand(3)
+    G_band_data = G_band.ReadAsArray(0, 0, im_width, im_height).astype(np.uint8)
+    B_band = NRGB_img.GetRasterBand(4)
+    B_band_data = B_band.ReadAsArray(0, 0, im_width, im_height).astype(np.uint8)
+
+    # data = np.zeros([im_height, im_width, 4], dtype = np.uint8)
+    # data[:,:,0] = N_band_data
+    # data[:,:,1] = R_band_data
+    # data[:,:,2] = G_band_data
+    # data[:,:,3] = B_band_data
+
+    # np.save(r'C:\Users\1\Desktop\tmp\data.npy', data)
+    print(R_band_data.shape)
+    # print("N_band_data:", N_band_data[:10,:10])
+    # print("R_band_data:", R_band_data[:10,:10])
+    # print("G_band_data:", G_band_data[:10,:10])
+    # print("B_band_data:", B_band_data[:10,:10])
+    # print("=========================================================")
+
+    img2 = np.zeros([im_height, im_width])
+    print(img2.shape)
+
+    # img2 = np.load(r'C:\Users\1\Desktop\tmp\data.npy')
+    # print(img2.shape)
+    # for i in range(img2.shape[2]):
+    #     print(img2[:,:,i].shape)
+    #     print(img2[:10,:10,i])
+
+    #
+    # driver = gdal.GetDriverByName('GTiff')
+    # driver.Register()
+    # RGB_img = gdal.Open(RGB_file)
+    # im_width = RGB_img.RasterXSize
+    # im_height = RGB_img.RasterYSize
+    #
+    # R_band = RGB_img.GetRasterBand(1)
+    # R_band_data = R_band.ReadAsArray(0, 0, im_width, im_height).astype(np.uint8)
+    # G_band = RGB_img.GetRasterBand(2)
+    # G_band_data = G_band.ReadAsArray(0, 0, im_width, im_height).astype(np.uint8)
+    # B_band = RGB_img.GetRasterBand(3)
+    # B_band_data = B_band.ReadAsArray(0, 0, im_width, im_height).astype(np.uint8)
+    #
+    # print(R_band_data.shape)
+    # print("R_band_data:", R_band_data[:10, :10])
+    # print("G_band_data:", G_band_data[:10, :10])
+    # print("B_band_data:", B_band_data[:10, :10])
+
+def dd_4():
+    RGB_file = r'E:\pycode\datasets\GID_dataset\Large-scale Classification_5classes\tmp_ori_rgb\GF2_PMS2__L1A0000607681-MSS2.tif'
+    #img2 = cv2.imread(RGB_file) [:256,:256,:]
+    np.save(r'C:\Users\1\Desktop\tmp\t2.npy', img2)
+
+def generate_json():
+    import json
+    key = ['imagePath', 'labelPath', 'x', 'y', 'block_x', 'block_y', 'width', 'height']
+    dataset_dict = {}
+    for i in range(3):
+        img_path = "/home/qudaming/image/{}".format(i)
+        lab_path = "/home/qudaming/label/{}".format(i)
+        x = i * 10
+        y = i * 100
+        w = i + 1
+        h = i + 2
+        values = [img_path, lab_path, x, y, w, h]
+        file_dict = dict(zip(key, values))
+        dataset_dict.setdefault("{}".format(i), file_dict)
+    print(dataset_dict)
+    with open("../temp_json.json", 'a') as f:
+        f.write(json.dumps(dataset_dict))
+
+if __name__ == '__main__':
+    # tif_path = r'E:\pycode\datasets\GID_dataset\Large-scale Classification_5classes\image_RGB\GF2_PMS1__L1A0001366284-MSS1.png'
+    # gid = GID_process(tif_path, infer_size = 512)
+    # gid.cut_tif()
+    dd_3()
 
 
 

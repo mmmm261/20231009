@@ -41,18 +41,29 @@ def get_coco128box(txt_file, H, W):
         else:
             cla, x, y, w, h = line
         if cla == 0 :
+        #if cla > 0 :
             xx = x * W
             yy = y * H
             hh = h * H
             ww = w * W
+
+            # center xy, w, h
             min_left = int(xx - ww / 2)
             min_top = int(yy - hh / 2)
             max_right = int(xx + ww / 2)
             max_down = int(yy + hh / 2)
+
+            # left_up xy, w, h
+            # min_left = int(xx)
+            # min_top = int(yy)
+            # max_right = int(xx + ww)
+            # max_down = int(yy + hh)
+
             if len(line) > 5:
                 point_list.append([min_left, min_top, max_right, max_down, conf])
             else:
                 point_list.append([min_left, min_top, max_right, max_down])
+
     return point_list
 
 def boxesIntersect(boxA, boxB):
@@ -78,8 +89,6 @@ def get_iou(boxA, boxB):
     area_A = (boxA[2] - boxA[0] + 1) * (boxA[3] - boxA[1] + 1)
     area_B = (boxB[2] - boxB[0] + 1) * (boxB[3] - boxB[1] + 1)
 
-    #union = float(area_A + area_B - interArea)
-    #iou = interArea / union
     iou = np.max([interArea/area_A, interArea/area_B])
     assert iou >= 0
     return iou
@@ -121,7 +130,12 @@ def get_metrices(test_path, label_path, pred_path, iou_thres):
     total_list = []
     for test_file in test_list :
         label_file = os.path.join(label_path + '\\' + test_file.split('\\')[-1].replace('jpg','xml'))
-        pred_file = os.path.join(pred_path + '\\' + test_file.split('\\')[-1].replace('jpg','txt'))
+        tmp_name = test_file.split('\\')[-1].split('.')[0]
+        pred_file = os.path.join(pred_path + '\\' + tmp_name + '.txt')
+        #pred_file = os.path.join(pred_path + '\\' + test_file.split('\\')[-1].replace('jpg','txt'))
+        print(label_file)
+        print(pred_file)
+
         H, W, _ = cv2.imread(test_file).shape
         lab_amount = 0
         pred_amount = 0
@@ -131,6 +145,7 @@ def get_metrices(test_path, label_path, pred_path, iou_thres):
         if os.path.exists(pred_file):
             pred_box = get_coco128box(pred_file, H ,W)
             pred_boxs = pred_box_NMS(pred_box)
+
             pred_amount = len(pred_boxs)
         if lab_amount != 0 and pred_amount != 0 :
             total_label, total_pred, TL, TP = get_metrics(label_boxs, pred_boxs, iou_thres)
@@ -165,7 +180,7 @@ def write_result_csv(total_list, csv_path):
             writer.writerow(r)
         writer.writerow([" ", str(total_objs), str(total_preds), str(total_LB), str(total_WB)])
 
-if __name__ == '__main__':
+def test_standart_data():
     test_smoke = True
     if test_smoke:
         test_path = r'E:\pycode\datasets\DZYH_test_dataset\yancut20220802_test_smoke\images'
@@ -174,8 +189,36 @@ if __name__ == '__main__':
         test_path = r'E:\pycode\datasets\DZYH_test_dataset\yzw20220704_test_no_smoke\images'
         label_path = r'E:\pycode\datasets\DZYH_test_dataset\yzw20220704_test_no_smoke\xml'
 
-    pred_path = r'E:\pycode\yolov5-master_6.1\results\20220811_best_pretrained_20220822_real_best\yancut20220802_test_smoke\labels'
-    csv_path = r'E:\pycode\yolov5-master_6.1\results\20220811_best_pretrained_20220822_real_best\yancut20220802_test_smoke.csv'
+    # pred_path = r'E:\pycode\yolov5-master_6.1\runs\detect\epoch50_pretrained_20220811_best_3559_pc_result\labels'
+    # csv_path = r'E:\pycode\yolov5-master_6.1\runs\detect\epoch50_pretrained_20220811_best_3559_pc_result.csv'
+    pred_path = r'F:\Hi3559_box\result\txt_result_confThresh0.15_modelrgb_databgr'
+    csv_path = r'F:\Hi3559_box\result\txt_result_confThresh0.15_modelrgb_databgr.csv'
+
     total_list = get_metrices(test_path, label_path, pred_path, 0.1)
 
     write_result_csv(total_list, csv_path)
+
+def batch_test():
+    total_list = []
+
+    for p in os.listdir(r'F:\tmp_single_frame_data_tagging')[1:]:
+        print(p)
+        img_path = r"F:\tmp_single_frame_data_tagging\{}\images".format(p)
+        lab_path = r"F:\tmp_single_frame_data_tagging\{}\xmls".format(p)
+        pred_path = r"F:\tmp_single_frame_data_tagging\{}\20220811_best_pretrained_20220830_best_result_txt".format(p)
+        total_list += get_metrices(img_path, lab_path, pred_path, 0.1)
+
+    csv_path = r'C:\Users\1\Desktop\tmp\20220811_best_pretrained_20220830_20230309_result_.csv'
+    write_result_csv(total_list, csv_path)
+
+def dd():
+    origal_txt_path = os.listdir(r'E:\pycode\datasets\DZYH_test_dataset\yancut20220802_test_smoke\txt')
+    for txt_name in origal_txt_path:
+        new_txt_name = txt_name.split('.')[0]
+        print(new_txt_name)
+        print(new_txt_name[:-1])
+        #new_txt = new_txt_name[]
+
+if __name__ == '__main__':
+    #dd()
+    test_standart_data()

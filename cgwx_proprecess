@@ -5,7 +5,7 @@ import numpy as np
 import cv2
 import glob
 import os
-from get_metrics import get_coco128box
+from calculate_object_detection_metrics import get_coco128box
 import numpy.ma as ma
 def tif2tif(img_path,save_path):
     img_list = glob.glob(os.path.join(img_path + '\\*.tif'))

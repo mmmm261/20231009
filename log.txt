@@ -1,0 +1,6 @@
+Start print log
+Something maybe fail.
+Finish
+['2022-11-18 11:08:33,520', 'Start print log']
+['2022-11-18 11:08:33,520', 'Something maybe fail.']
+['2022-11-18 11:08:33,520', 'Finish']

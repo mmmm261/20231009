@@ -123,8 +123,26 @@ def remove_img_from_empty_txt(img_path, txt_path):
            os.remove(os.path.join(img_path, txt.replace('txt', 'jpg')))
            os.remove(os.path.join(txt_path, txt))
 
+def get_motion_image_from_YZW(smoke_txt_path, save_path):
+    with open(smoke_txt_path, 'r') as f:
+        file_list = f.readlines()
+    file_list = file_list[:28]
+    for k, file in enumerate(file_list):
+        k = k + 72
+        file_dir = os.path.dirname(file)
+        new_file_dir = os.path.join(save_path, str(k))
+        if not os.path.exists(new_file_dir):
+            os.mkdir(new_file_dir)
+        for i in range(25):
+            img_name = "stepone_source_image{}.jpg".format(i)
+            img_path = os.path.join(file_dir, img_name)
+            new_img_path = os.path.join(new_file_dir, img_name)
+            print(img_path)
+            print(new_img_path)
+            print("==========")
+            shutil.copy(img_path, new_img_path)
 
 if __name__ == '__main__':
-    img_path = r'E:\pycode\datasets\DZYH_train_dataset\ce20220822\images'
-    txt_path = r'E:\pycode\datasets\DZYH_train_dataset\ce20220822\txt'
-    remove_img_from_empty_txt(img_path, txt_path)
+    txt_path = r'C:\Users\1\Desktop\通化预置位数据列表20220713\1_smoke_1.txt'
+    save_path = r'E:\Qtcode\MotionDetectionData\YZW_smoke'
+    get_motion_image_from_YZW(txt_path, save_path)

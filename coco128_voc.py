@@ -1,5 +1,8 @@
 #yolov5的txt检测结果 转换为xml格式，用于斯总的数据标注，进行下一轮算法迭代。
 import os
+import sqlite3
+
+import IPython.utils.path
 import cv2
 from xml.dom import minidom
 import numpy as np
@@ -9,12 +12,14 @@ class VOC_Sample_Generator:
     def __init__(self):
         self.dom = minidom.Document()
         self.root_node = self.dom.createElement('annotation')
+        #demo1依赖
+        #self.object_node = self.dom.createElement('object')
+        #self.root_node.appendChild(self.object_node)
+
+    #demo2依赖
+    def add_object(self):
         self.object_node = self.dom.createElement('object')
         self.root_node.appendChild(self.object_node)
-
-    # def add_object(self):
-    #     self.object_node = self.dom.createElement('object')
-    #     self.root_node.appendChild(self.object_node)
 
     def add_folder(self, folder):
         text = self.dom.createTextNode(folder)
@@ -86,7 +91,6 @@ class VOC_Sample_Generator:
         self.object_node.appendChild(truncated_node)
         self.object_node.appendChild(difficult_node)
 
-
     def add_bndbox(self, xmin, ymin, xmax, ymax):
         text = self.dom.createTextNode(str(xmin))
         xmin_node = self.dom.createElement('xmin')
@@ -120,8 +124,12 @@ class VOC_Sample_Generator:
         f.close()
 
 def get_HWC(img_path):
+    try:
+        return cv2.imdecode(np.fromfile(img_path, np.uint8), flags = cv2.IMREAD_COLOR).shape
+    except:
+        print("get_HWC_error, and return (480, 480, 3)")
+        return (480,480,3)
 
-    return cv2.imdecode(np.fromfile(img_path, np.uint8), flags = cv2.IMREAD_COLOR).shape
 
 
 def get_xyxy(txt_path, W, H):
@@ -130,7 +138,11 @@ def get_xyxy(txt_path, W, H):
     point_list = []
     for lines in files:
         line = [float(i) for i in lines.split()]
-        cla, x, y, w, h, conf = line
+        try:
+            cla, x, y, w, h, conf = line
+        except:
+            cla, x, y, w, h = line
+
         xx = x * W
         yy = y * H
         hh = h * H
@@ -140,24 +152,29 @@ def get_xyxy(txt_path, W, H):
         max_right = int(xx + ww / 2)
         max_down = int(yy + hh / 2)
         point_list.append([cla, min_left, min_top, max_right, max_down])
+    #print(len(point_list))
     return point_list
 # 测试
-if __name__ == "__main__":
-    result_path = r'Z:\2022_Data\test_data\ce_processed_data\ce20220819\result'
-    txt_path = r'Z:\2022_Data\test_data\ce_processed_data\ce20220819\txt'
-    save_path = r'Z:\2022_Data\test_data\ce_processed_data\ce20220819\xmls'
 
-    file_list = os.listdir(result_path)#os.path.join(result_path + '\\*.jpg')
+#one_obj_two_bnd
+def demo1():
+    result_path = r'F:\tmp_single_frame_data_after_cls\cc20230222\images'
+    txt_path = r'F:\tmp_single_frame_data_after_cls\cc20230222\20220811_best_pretrained_20220830_best_result_txt'
+    save_path = r'F:\tmp_single_frame_data_after_cls\cc20230222\20220811_best_pretrained_20220830_best_result_xml'
+
+    if not os.path.exists(save_path):
+        os.mkdir(save_path)
+
+    file_list = os.listdir(result_path)  # os.path.join(result_path + '\\*.jpg')
     for file in file_list:
         print(file)
         if file.endswith('jpg'):
             points = []
-            W,H,C = get_HWC(os.path.join(result_path, file))
-            if os.path.exists(os.path.join(txt_path,file.replace('jpg','txt'))):
-            #if os.path.exists(os.path.join(txt_path,"{}.txt".format(file))):
-                points = get_xyxy(os.path.join(txt_path, file.replace('jpg','txt')), H, W)
+            W, H, C = get_HWC(os.path.join(result_path, file))
+            if os.path.exists(os.path.join(txt_path, file.replace('jpg', 'txt'))):
+                # if os.path.exists(os.path.join(txt_path,"{}.txt".format(file))):
+                points = get_xyxy(os.path.join(txt_path, file.replace('jpg', 'txt')), H, W)
             voc = VOC_Sample_Generator()
-
 
             voc.add_folder(r'images')
             voc.add_filename(file)
@@ -167,12 +184,105 @@ if __name__ == "__main__":
             voc.add_size(H, W, C)
             voc.add_segmented('0')
 
-            voc.add_nptd('smoke','Unspecified','0','0')
+            voc.add_nptd('smoke', 'Unspecified', '0', '0')
 
             if points:
                 for point in points:
                     if point[0] == 0:
                         voc.add_bndbox(point[1], point[2], point[3], point[4])
 
-            voc.build(os.path.join(save_path ,file.replace('jpg','xml')))
+            voc.build(os.path.join(save_path, file.replace('jpg', 'xml')))
 
+#two obj_two_bnd usage!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+def demo2():
+    result_path = r'C:\Users\1\Desktop\yolov8_changed_dataset\changed\tmp_img0'
+    txt_path = r'C:\Users\1\Desktop\yolov8_changed_dataset\origal\tmp_lab'
+    save_path = r'C:\Users\1\Desktop\yolov8_changed_dataset\changed\tmp_xml0'
+
+    if not os.path.exists(save_path):
+        os.mkdir(save_path)
+
+    file_list = os.listdir(result_path)  # os.path.join(result_path + '\\*.jpg')
+    for file in file_list:
+        print(file)
+        if file.endswith('jpg'):
+            points = []
+            W, H, C = get_HWC(os.path.join(result_path, file))
+            if os.path.exists(os.path.join(txt_path, file.replace('jpg', 'txt'))):
+                # if os.path.exists(os.path.join(txt_path,"{}.txt".format(file))):
+                points = get_xyxy(os.path.join(txt_path, file.replace('jpg', 'txt')), H, W)
+            voc = VOC_Sample_Generator()
+
+            voc.add_folder(r'images')
+            voc.add_filename(file)
+            voc.add_path(os.path.join(result_path, file))
+            voc.add_database('Unknown')
+
+            voc.add_size(H, W, C)
+            voc.add_segmented('0')
+
+            if points:
+                for point in points:
+                    if point[0] == 0:
+                        voc.add_object()
+                        voc.add_nptd('smoke', 'Unspecified', '0', '0')
+                        voc.add_bndbox(point[1], point[2], point[3], point[4])
+
+            voc.build(os.path.join(save_path, file.replace('jpg', 'xml')))
+
+#result_path = r'D:\93_South_China_tiger'
+#txt_path = r'C:\Users\1\Desktop\tmp_tiger_result\labels'
+#save_path = r'C:\Users\1\Desktop\tmp_tiger_result\xmls_2'
+def demo_for_animal(result_path, txt_path, save_path, cls_name):
+    if not os.path.exists(save_path):
+        os.mkdir(save_path)
+
+    file_list = os.listdir(result_path)  # os.path.join(result_path + '\\*.jpg')
+    for file in file_list:
+        print(file)
+        if file.endswith('jpg'):
+            points = []
+            W, H, C = get_HWC(os.path.join(result_path, file))
+            if os.path.exists(os.path.join(txt_path, file.replace('jpg', 'txt'))):
+                # if os.path.exists(os.path.join(txt_path,"{}.txt".format(file))):
+                points = get_xyxy(os.path.join(txt_path, file.replace('jpg', 'txt')), H, W)
+            voc = VOC_Sample_Generator()
+
+            voc.add_folder(r'images')
+            voc.add_filename(file)
+            voc.add_path(file)
+            voc.add_database('Unknown')
+
+            voc.add_size(H, W, C)
+            voc.add_segmented('0')
+
+            if points:
+                for point in points:
+                    voc.add_object()
+                    voc.add_nptd(str(cls_name), 'Unspecified', '0', '0')
+                    voc.add_bndbox(point[1], point[2], point[3], point[4])
+
+            voc.build(os.path.join(save_path, file.replace('jpg', 'xml')))
+
+def batch_demo_for_animal():
+    txt_dir = r'C:\Users\1\Desktop\animals_txt'
+    result_dir = r'C:\Users\1\Desktop\animals'
+    xml_dir = r'C:\Users\1\Desktop\animals_xml'
+    cls_list = os.listdir(txt_dir)
+    result_list = os.listdir(result_dir)
+
+    for cls in cls_list:
+        txt_path = os.path.join(txt_dir, cls, "labels")
+        result_cls_name = [i for i in result_list if i.startswith(cls)][0]
+        result_path = os.path.join(result_dir, result_cls_name)
+        xmls_path = os.path.join(xml_dir, result_cls_name)
+        print(txt_path)
+        print(result_path)
+        print(xmls_path)
+        print("=========================")
+        demo_for_animal(result_path, txt_path, xmls_path, cls)
+
+
+
+if __name__ == "__main__":
+    batch_demo_for_animal()

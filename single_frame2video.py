@@ -2,7 +2,9 @@ import cv2
 import os
 import shutil
 import json
-
+#云端云雾分类数据
+#从json文件中获取视频的烟的位置
+#从视频/图片中截取烟并生成视频
 def save_new_video(vid_path, point_list, save_path):
     for i, box in enumerate(point_list):
         left_up_point, right_down_point = (int(1920 * (box[1] - 0.5 * box[3])), int(1080 * (box[2] - 0.5 * box[4]))), (
@@ -198,17 +200,81 @@ def get_classification_video_from_json_1(video_path, json_label_path, save_resul
                     cap.release()
                     i += 1
 
-
 def batch_run(vid_list, json_label_path, saved_list):
     for i in range(len(vid_list)):
         get_classification_video_from_json_(vid_list[i], json_label_path, saved_list[i])
 
-if __name__ == '__main__':
-    video_path = r'Z:\lisi\cc20220121\正常'
-    json_label_path = r'E:\pycode\datasets\video_classification_dataset\normal_json20220902'
-    save_result_path = r'Z:\qdm\smoke_fog_classfication_video\cc20220121_normal_centerxy'
-    get_classification_video_from_json(video_path, json_label_path, save_result_path)
+def cut_video(video_path, center_x, center_y, w, h, save_path):
 
-    vid_list = [r'Z:\lisi\cc20220121\正常', r'Z:\lisi\cc20220714\正常', r'Z:\lisi\cc20220819\正常']
-    saved_list = [r'Z:\qdm\smoke_fog_classfication_video\cc20220121_normal_leftupxy', r'Z:\qdm\smoke_fog_classfication_video\cc20220714_normal_leftupxy', r'Z:\qdm\smoke_fog_classfication_video\cc20220819_normal_leftupxy']
-    batch_run(vid_list, json_label_path, saved_list)
+    cap = cv2.VideoCapture(video_path)
+
+    width = cap.get(3)  # float
+    height = cap.get(4)  # float
+    fps = cap.get(cv2.CAP_PROP_FPS)
+
+    cut_width = int(w * width)
+    cut_height = int(h * height)
+
+    x1 = int(center_x * width - 0.5 * cut_width)
+    y1 = int(center_y * height- 0.5 * cut_height)
+
+    x2  = int(center_x * width + 0.5 * cut_width)
+    y2 = int(center_y * height + 0.5 * cut_height)
+
+    cut_width = x2 - x1
+    cut_height = y2 - y1
+
+    print("===========")
+    size = (cut_width, cut_height)
+    #print("size:", size)
+    print(save_path)
+
+    avi_write = cv2.VideoWriter(save_path, cv2.VideoWriter_fourcc(*'mp4v'), fps, size)
+
+    i = 0
+    while cap.isOpened():
+        ret, img = cap.read()
+        if ret:
+            i += 1
+            #print(img.shape)
+            #print(x1, y1, x2, y2)
+            #print(y2 - y1, x2 - x1)
+            imgs = img[y1:y2, x1:x2, :]
+            #print(imgs.shape)
+            avi_write.write(imgs)
+            #break
+        else:
+            break
+    print("all f:", i)
+    avi_write.release()
+    cap.release()
+
+
+def batch_cut_video():
+    video_path_list = ["cc20220819", "cc20220919", "cc20221018", "cc20221111", "cc20221212", "cc20230111", "cc20230222"]
+    for i, video_p in enumerate(video_path_list):
+        video_d = r'Z:\lisi\{}\烟'.format(video_p)
+        label_d = r'Z:\qdm\single_frame_smoke_detection\train_dataset\2023_data\{}\labels'.format(video_p)
+        save_d = r'F:\tmp_cut_video'
+        for label_path in os.listdir(label_d):
+            video_file = os.path.join(video_d, "{}.mp4".format(label_path.split('.')[0]))
+            with open (os.path.join(label_d, label_path), 'r') as f:
+                files = f.readlines()
+            idx = 0
+            for lines in files:
+                _, left_x, up_y, w, h = [float(i) for i in lines.split()]
+                save_file = os.path.join(save_d, "{}_{}.mp4".format(label_path.split('.')[0], idx))
+                idx += 1
+                cut_video(video_file, left_x, up_y, w, h, save_file)
+            f.close()
+
+if __name__ == '__main__':
+    # video_path = r'Z:\lisi\cc20220121\正常'
+    # json_label_path = r'E:\pycode\datasets\video_classification_dataset\normal_json20220902'
+    # save_result_path = r'Z:\qdm\smoke_fog_classfication_video\cc20220121_normal_centerxy'
+    # get_classification_video_from_json(video_path, json_label_path, save_result_path)
+    #
+    # vid_list = [r'Z:\lisi\cc20220121\正常', r'Z:\lisi\cc20220714\正常', r'Z:\lisi\cc20220819\正常']
+    # saved_list = [r'Z:\qdm\smoke_fog_classfication_video\cc20220121_normal_leftupxy', r'Z:\qdm\smoke_fog_classfication_video\cc20220714_normal_leftupxy', r'Z:\qdm\smoke_fog_classfication_video\cc20220819_normal_leftupxy']
+    # batch_run(vid_list, json_label_path, saved_list)
+    batch_cut_video()

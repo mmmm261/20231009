@@ -58,6 +58,5 @@ def readTif(fileName):
 		#cv2.imwrite(r'C:\Users\1\Desktop\out_2.png', bgr_img)
 
 if __name__ == '__main__':
-	file_path = r'E:\pycode\datasets\cgwx_20220920\JL1KF01C_200101850_001_L5D_PSH_204029\JL1KF01C_200101850_001_L5D_PSH.tif'
-	#r'E:\pycode\datasets\cgwx_20220920\JL1GF02B_PMS2_20220711092631_200092286_102_0016_001_L3C_PSH_204043\JL1GF02B_PMS2_20220711092631_200092286_102_0016_001_L3C_PSH.tif'
+	file_path = r'Z:\2022_Data\近红外相机\光谱响应测试（500mm折反镜头+Mars5000黑白工业相机）\测试3-400-700-tiff\Pic_2018_11_12_131813_blockId#18698.tif'
 	readTif(file_path)
